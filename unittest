@@ -1,0 +1,116 @@
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { atLeastOneChangedValidator } from './your-validator-path';
+
+describe('atLeastOneChangedValidator', () => {
+  let formBuilder: FormBuilder;
+  let formGroup: FormGroup;
+  const initialValues = {
+    name: 'John Doe',
+    email: 'john@example.com',
+    age: 30,
+    active: true
+  };
+
+  beforeEach(() => {
+    formBuilder = new FormBuilder();
+    formGroup = formBuilder.group({
+      name: [initialValues.name],
+      email: [initialValues.email],
+      age: [initialValues.age],
+      active: [initialValues.active]
+    });
+  });
+
+  it('should return null when at least one field has changed', () => {
+    formGroup.setValidators(atLeastOneChangedValidator(initialValues));
+    
+    // Change one field
+    formGroup.get('name').setValue('Jane Doe');
+    
+    expect(formGroup.valid).toBeTrue();
+    expect(formGroup.errors).toBeNull();
+  });
+
+  it('should return { noChanges: true } when no fields have changed', () => {
+    formGroup.setValidators(atLeastOneChangedValidator(initialValues));
+    
+    // No changes made
+    formGroup.updateValueAndValidity();
+    
+    expect(formGroup.valid).toBeFalse();
+    expect(formGroup.errors).toEqual({ noChanges: true });
+  });
+
+  it('should handle different data types correctly', () => {
+    formGroup.setValidators(atLeastOneChangedValidator(initialValues));
+    
+    // Change number field
+    formGroup.get('age').setValue(31);
+    expect(formGroup.valid).toBeTrue();
+    
+    // Change boolean field
+    formGroup.get('active').setValue(false);
+    expect(formGroup.valid).toBeTrue();
+  });
+
+  it('should work with deep object comparison', () => {
+    const initialComplexValues = {
+      address: { street: 'Main St', city: 'Metropolis' }
+    };
+    const complexForm = formBuilder.group({
+      address: [initialComplexValues.address]
+    });
+    
+    complexForm.setValidators(atLeastOneChangedValidator(initialComplexValues));
+    
+    // No changes
+    complexForm.updateValueAndValidity();
+    expect(complexForm.valid).toBeFalse();
+    
+    // Deep change
+    complexForm.get('address').setValue({ street: 'Main St', city: 'Gotham' });
+    expect(complexForm.valid).toBeTrue();
+  });
+
+  it('should ignore fields not present in initial values', () => {
+    formGroup.addControl('newField', formBuilder.control('some value'));
+    formGroup.setValidators(atLeastOneChangedValidator(initialValues));
+    
+    // Only new field changed (not in initial values)
+    formGroup.updateValueAndValidity();
+    expect(formGroup.valid).toBeFalse();
+  });
+
+  it('should handle null and undefined values', () => {
+    const initialWithNulls = {
+      field1: null,
+      field2: undefined
+    };
+    const nullForm = formBuilder.group({
+      field1: [null],
+      field2: [undefined]
+    });
+    
+    nullForm.setValidators(atLeastOneChangedValidator(initialWithNulls));
+    
+    // No changes
+    nullForm.updateValueAndValidity();
+    expect(nullForm.valid).toBeFalse();
+    
+    // Change null to value
+    nullForm.get('field1').setValue('not null');
+    expect(nullForm.valid).toBeTrue();
+    
+    // Change undefined to value
+    nullForm.get('field2').setValue('defined');
+    expect(nullForm.valid).toBeTrue();
+  });
+
+  it('should work with empty form groups', () => {
+    const emptyForm = formBuilder.group({});
+    emptyForm.setValidators(atLeastOneChangedValidator({}));
+    
+    emptyForm.updateValueAndValidity();
+    expect(emptyForm.valid).toBeFalse();
+  });
+});
